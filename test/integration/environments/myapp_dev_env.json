@@ -1,0 +1,9 @@
+{
+  "name" : "myapp_dev_env",
+  "cookbook_versions": {
+    "chef_samplecookbook" : "= 0.1.0"
+  },
+  "override_attributes": {
+    "attr1" : "value1"
+  }
+}
