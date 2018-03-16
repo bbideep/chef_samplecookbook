@@ -1,0 +1,73 @@
+---
+driver:
+  name: ec2
+  associate_public_ip: false
+  shared_credentials_profile: <THIS IS THE USER'S ROLE>
+  aws_ssh_key_id: <SSH KEY NAME TO LOGIN TO THE EC2 INSTANCE>
+  instance_type: t2.micro
+  iam_profile_name: <IAM ROLE FOR THE EC2 INSTANCE>
+  region: <REGION>
+  availability_zone: <ZONE>
+  subnet_id: <SUBNET ID>
+  security_group_ids: ["sg-1234", "sg-5678"]
+  block_device_mappings:
+  - device_name: /dev/sdf
+    ebs:
+      snapshot_id: snap-1234
+      volume_size: 30
+      volume_type: gp2
+      delete_on_termination: true
+      
+transport:
+  # ssh_key: Your local key location.
+  ssh_key: "/Users/bideep/ssh_keys/dev_testkitchen.pem"
+  associate_public_ip: false
+  connection_timeout: 60
+  connection_retries: 10
+
+provisioner:
+  name: chef_zero
+  log_level: info
+  http_proxy: "<%= ENV['HTTP_PROXY']%>" # You can set the value in shell
+  https_proxy: "<%= ENV['HTTPS_PROXY']%>" # You can set the value in shell
+  no_proxy: "169.254.169.254,amazonaws.com,corp_domain.com,corp_subdomain.com"
+  require_chef_omnibus: true
+  chef_omnibus_url: https://raw.githubusercontent.com/bbideep/utils/master/chefclientinstall.sh
+  environments_path: test/integration/environments
+  roles_path: test/integration/roles
+  data_bags_path: test/integration/data_bags
+  # encrypted_data_bag_secret_key_path: This file should not be checked in to the repo. Add in .gitignore. Use your own secret token/key locally.
+  # Note: Read the secrets as Chef::EncryptedDataBagItem.load_secret("/tmp/kitchen/encrypted_data_bag_secret")
+  # instead of Chef::EncryptedDataBagItem.load_secret("/etc/chef/secret_key") when you are working in the test-kitchen :)
+  # This is how test-kitchen likes it - with kitchen's absolute path.
+  encrypted_data_bag_secret_key_path: "test/integration/secret_key"
+  client.rb:
+    environment: myapp_dev_env
+    ssl_verify_mode: :verify_none
+    verify_api_cert: false
+    trusted_certs_dir: "/etc/chef/trusted_certs"
+    http_proxy: "<%= ENV['HTTP_PROXY']%>"
+    https_proxy: "<%= ENV['HTTPS_PROXY']%>"
+
+platforms:
+  - name: rhel7
+    driver:
+      image_id: ami-123456
+      interface: private
+      transport:
+        username: ec2-user
+      tags:
+        Name: test_httpd_inst1
+        Environment: dev
+
+suites:
+  - name: default
+    run_list:
+      - role[httpd_base]
+      - recipe[chef_samplecookbook::configure_security]
+    verifier:
+      inspec_tests:
+       - test/smoke/default
+      http_proxy: "<%= ENV['HTTP_PROXY']%>"
+      https_proxy: "<%= ENV['HTTP_PROXY']%>"
+      no_proxy: "169.254.169.254,amazonaws.com,corp_domain.com,corp_subdomain.com"
